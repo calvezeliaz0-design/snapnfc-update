@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script>
+// Update application moved to end of body
+</script>
+<title>TapChat</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Arial,sans-serif;background:#f5f5f7;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:0;color:#1d1d1f;-webkit-font-smoothing:antialiased}
+  .phone{width:100%;max-width:400px;height:100vh;max-height:840px;background:#111;border-radius:0;padding:0;box-shadow:none;position:relative;overflow:hidden;display:flex;flex-direction:column}
+  @media(min-width:480px){.phone{border-radius:36px;box-shadow:0 20px 60px rgba(0,0,0,.18);height:840px}}
+  .screen{flex:1;background:#fff;display:flex;flex-direction:column;overflow:hidden}
+  .cambar{padding:6px 16px 10px;display:flex;align-items:center;gap:8px;background:#fff;border-bottom:1px solid #f2f2f7}
+  .cambar .iconbtn{width:36px;height:36px;border-radius:50%;background:#f2f2f7;border:1px solid #e5e5e5;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;color:#1d1d1f}
+  .cambar .title{flex:1;font-size:18px;font-weight:700;color:#1d1d1f}
+  .content{flex:1;overflow-y:auto;background:#fff}
+  .bnav{height:64px;background:#fff;border-top:1px solid #e5e5e5;display:flex;align-items:center;justify-content:space-around;padding-bottom:6px}
+  .bnav button{background:none;border:0;cursor:pointer;opacity:.5;transition:.2s;display:flex;flex-direction:column;align-items:center;font-size:10px;color:#8e8e93;gap:3px;padding:4px 12px;border-radius:8px}
+  .bnav button.active{opacity:1;color:#1d1d1f}
+  .chatrow{display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;border-bottom:1px solid #f2f2f7}
+  .chatrow:active{background:#f2f2f7}
+  .chatrow .av{width:48px;height:48px;border-radius:50%;background:#1d1d1f;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0;color:#fff}
+  .chatrow .info{flex:1;min-width:0}
+  .chatrow .info b{font-size:15px;display:block;color:#1d1d1f;font-weight:600}
+  .chatrow .info span{font-size:13px;color:#8e8e93;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;margin-top:2px}
+  .chat-bubble{max-width:72%;padding:9px 14px;border-radius:18px;margin-bottom:4px;font-size:14px;line-height:1.35}
+  .chat-bubble.me{background:#e9e9eb;color:#1d1d1f;margin-left:auto;border-bottom-right-radius:6px}
+  .chat-bubble.them{background:#f2f2f7;color:#1d1d1f;border-bottom-left-radius:6px}
+  .sender-label{font-size:10px;color:#8e8e93;margin:6px 4px 2px}
+  .inputbar{display:flex;gap:8px;padding:10px 14px;background:#fff;border-top:1px solid #e5e5e5;padding-bottom:calc(10px + env(keyboard-inset-height, 0px))}
+  .inputbar input{flex:1;border:none;border-radius:20px;padding:9px 14px;font-size:14px;background:#f2f2f7;color:#1d1d1f;outline:none}
+  .inputbar button{border-radius:50%;width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;background:#1d1d1f;border:none;color:#fff;cursor:pointer;font-size:14px}
+  .stories{display:flex;gap:12px;padding:12px 16px;overflow-x:auto;background:#fff;border-top:1px solid #f2f2f7}
+  .story{text-align:center;flex:0 0 auto}
+  .story .ring{width:58px;height:58px;border-radius:50%;padding:3px;background:#000;margin-bottom:4px}
+  .story .av{width:100%;height:100%;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#1d1d1f;border:2px solid #fff}
+  .story .name{font-size:11px;color:#1d1d1f;font-weight:500}
+  .viewfinder{flex:1;background:linear-gradient(160deg,#2e1065,#0f0a1f);position:relative;display:flex;align-items:center;justify-content:center}
+  .shutter{width:72px;height:72px;border-radius:50%;border:4px solid #fff;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+  .shutter::after{content:'';width:56px;height:56px;border-radius:50%;background:#fff}
+  .vf-label{position:absolute;bottom:16px;left:0;right:0;text-align:center;font-size:11px;color:rgba(255,255,255,.7);letter-spacing:1.5px;font-weight:600}
+  .profhead{text-align:center;padding:24px 16px 12px}
+  .profhead .bigav{width:86px;height:86px;border-radius:50%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:34px;color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.12);background:#000}
+  .profhead h2{font-size:20px;color:#1d1d1f;font-weight:700}
+  .profhead p{font-size:14px;color:#8e8e93}
+  .statsrow{display:flex;justify-content:space-around;padding:16px 0;border-top:1px solid #e5e5e5;border-bottom:1px solid #e5e5e5;margin:0 16px}
+  .statsrow div{text-align:center}
+  .statsrow b{display:block;font-size:18px;color:#1d1d1f;font-weight:700}
+  .statsrow span{font-size:11px;color:#8e8e93}
+  .auth-screen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:#f5f5f7}
+  .auth-screen input{width:100%;max-width:280px;padding:12px;border-radius:12px;border:1px solid #d1d1d6;background:#fff;color:#1d1d1f;font-size:14px;outline:none;margin-bottom:10px}
+  .auth-screen button{width:100%;max-width:280px;padding:12px;border-radius:8px;border:none;background:#000;color:#fff;font-size:14px;font-weight:600;cursor:pointer}
+  .auth-screen details{width:100%;max-width:280px;margin-bottom:10px}
+  .auth-screen summary{font-size:11px;color:#8e8e93;cursor:pointer}
+  .search-screen{flex:1;overflow-y:auto;padding:16px;background:#f5f5f7}
+  .search-screen input{width:100%;padding:12px 12px 12px 36px;border-radius:12px;border:1px solid #d1d1d6;background:#fff;color:#1d1d1f;font-size:14px;outline:none}
+  .card-row{display:flex;align-items:center;gap:10px;padding:10px;background:#fff;border-radius:12px;margin-bottom:8px;border:1px solid #e5e5e5}
+  .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1d1d1f;color:#fff;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+  .back-btn{background:none;border:none;color:#1d1d1f;font-size:22px;cursor:pointer;padding:0 8px}
+  .setup-screen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:#f5f5f7}
+  .setup-screen input{width:100%;max-width:320px;padding:12px;border-radius:12px;border:1px solid #d1d1d6;background:#fff;color:#1d1d1f;font-size:14px;outline:none;margin-bottom:10px}
+  .setup-screen button{width:100%;max-width:320px;padding:12px;border-radius:12px;border:none;background:#000;color:#fff;font-size:14px;font-weight:700;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="phone" id="phone">
+  <div class="screen" id="screen"></div>
+  <div class="bnav" id="bnav">
+    <button class="active" onclick="go('camera')"><span style="font-size:20px">📷</span>Caméra</button>
+    <button onclick="go('chat')"><span style="font-size:20px">💬</span>Chat</button>
+    <button onclick="go('profile')"><span style="font-size:20px">👤</span>Profil</button>
+  </div>
+</div>
+
+<script>
+  // ---- Supabase config ----
+  // Remplace par ton URL et ta clé anon Supabase
+  const SUPABASE_URL = localStorage.getItem('sb_url') || 'https://yqtpvuewgktjhqrzerxc.supabase.co';
+  const SUPABASE_KEY = localStorage.getItem('sb_key') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxdHB2dWV3Z2t0amhxcnplcnhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0NDEyNDQsImV4cCI6MjEwODAxNzI0NH0.EEbIv6-tznWsPokUCl6SIiwuHznoGOtyYaRT-bOYtAM';
+  let sb = null;
+  function initSupabase() {
+    if (SUPABASE_URL && SUPABASE_KEY && window.supabase) {
+      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      return true;
+    }
+    return false;
+  }
+
+  // ---- State ----
+  let AUTH = null;
+  try { AUTH = JSON.parse(localStorage.getItem('auth')); } catch(e) {}
+  let FRIENDS = [];
+  let CHAT_TARGET = null;
+  let MESSAGES = [];
+  let POLL_TIMER = null;
+  let currentScreen = 'auth';
+
+  function me() { return AUTH ? AUTH.pseudo : null; }
+  function avatarOf(name) { return (name||'?').charAt(0).toUpperCase(); }
+
+  // ---- Setup screen (Supabase config) ----
+  function setupScreen() {
+    return `<div class="setup-screen">
+      <div style="font-size:40px;margin-bottom:12px">⚙️</div>
+      <div style="font-size:20px;font-weight:700;color:#1d1d1f;margin-bottom:4px">Configuration Supabase</div>
+      <div style="font-size:13px;color:#8e8e93;margin-bottom:20px;text-align:center;max-width:300px">1. Crée un projet sur supabase.com<br>2. SQL Editor → colle supabase_schema.sql → Run<br>3. Settings → API → copie URL + clé anon</div>
+      <input id="sbUrl" placeholder="https://xxxx.supabase.co" value="${SUPABASE_URL}" />
+      <input id="sbKey" placeholder="eyJ... (anon key)" value="${SUPABASE_KEY}" />
+      <button onclick="saveSupabaseConfig()">Sauvegarder et continuer</button>
+      <button onclick="testConnection()" style="width:100%;max-width:320px;padding:10px;border-radius:12px;border:1px solid #d1d1d6;background:#fff;color:#1d1d1f;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px">Tester la connexion</button>
+      <div id="setupMsg" style="margin-top:10px;font-size:12px;color:#8e8e93;text-align:center"></div>
+    </div>`;
+  }
+  async function testConnection() {
+    const url = document.getElementById('sbUrl').value.trim();
+    const key = document.getElementById('sbKey').value.trim();
+    const msg = document.getElementById('setupMsg');
+    if (!url || !key) { msg.textContent = 'Remplis les deux champs.'; return; }
+    msg.textContent = 'Test en cours…';
+    try {
+      const client = window.supabase.createClient(url, key);
+      const { data, error } = await client.from('users').select('pseudo').limit(1);
+      if (error) { msg.textContent = '❌ Erreur: ' + error.message + ' (as-tu exécuté le SQL ?)'; }
+      else { msg.textContent = '✅ Connexion OK ! ' + (data.length ? data.length + ' utilisateur(s)' : 'Tables prêtes'); }
+    } catch(e) { msg.textContent = '❌ ' + e.message; }
+  }
+  function saveSupabaseConfig() {
+    const url = document.getElementById('sbUrl').value.trim();
+    const key = document.getElementById('sbKey').value.trim();
+    const msg = document.getElementById('setupMsg');
+    if (!url || !key) { msg.textContent = 'Remplis les deux champs.'; return; }
+    localStorage.setItem('sb_url', url);
+    localStorage.setItem('sb_key', key);
+    location.reload();
+  }
+
+  // ---- Auth ----
+  function authScreen() {
+    const isLogin = !!AUTH;
+    return `<div class="auth-screen">
+      <div style="width:64px;height:64px;border-radius:50%;background:#000;display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;margin-bottom:12px;font-weight:700">${isLogin?AUTH.pseudo.charAt(0).toUpperCase():'?'}</div>
+      <div style="font-size:20px;font-weight:700;color:#1d1d1f;margin-bottom:4px">${isLogin?'Connexion':'Créer un compte'}</div>
+      <div style="font-size:13px;color:#8e8e93;margin-bottom:20px">${isLogin?'Bon retour !':'Bienvenue'}</div>
+      <input id="authPseudo" placeholder="Pseudo" value="${isLogin?AUTH.pseudo:''}" />
+      <input id="authPass" type="password" placeholder="Mot de passe" />
+      <button onclick="doAuth()">${isLogin?'Se connecter':'S\'inscrire'}</button>
+      <div id="authMsg" style="margin-top:10px;font-size:12px;color:#8e8e93;text-align:center"></div>
+    </div>`;
+  }
+  async function doAuth() {
+    const pseudo = document.getElementById('authPseudo').value.trim();
+    const pass = document.getElementById('authPass').value;
+    const msg = document.getElementById('authMsg');
+    if (!pseudo || !pass) { msg.textContent = 'Remplis tous les champs.'; return; }
+    if (!sb) { msg.textContent = 'Supabase non configuré.'; return; }
+    // signup or login
+    if (!AUTH) {
+      // signup
+      const { data: existing } = await sb.from('users').select('pseudo').eq('pseudo', pseudo).maybeSingle();
+      if (existing) { msg.textContent = 'Pseudo déjà pris.'; return; }
+      const { error } = await sb.from('users').insert({ pseudo, password: pass });
+      if (error) {
+        if (error.code === '23505') msg.textContent = 'Pseudo déjà pris.';
+        else if (error.code === '42P01') msg.textContent = 'Tables manquantes. Exécute le SQL dans Supabase.';
+        else msg.textContent = 'Erreur: ' + error.message;
+        return;
+      }
+    } else {
+      // login: verify
+      const { data, error } = await sb.from('users').select('password').eq('pseudo', pseudo).maybeSingle();
+      if (error) { msg.textContent = 'Erreur: ' + error.message; return; }
+      if (!data) { msg.textContent = 'Compte introuvable.'; return; }
+      if (data.password !== pass) { msg.textContent = 'Mot de passe incorrect.'; return; }
+    }
+    AUTH = { pseudo };
+    try { localStorage.setItem('auth', JSON.stringify(AUTH)); } catch(e) {}
+    showToast('Bienvenue ' + pseudo + ' !');
+    if (!localStorage.getItem('onboarded')) { currentScreen = 'onboarding'; }
+    else { currentScreen = 'camera'; }
+    render();
+  }
+
+  // ---- Onboarding ----
+  let onboardingStep = 0;
+  const ONBOARDING_PAGES = [
+    { emoji: '📸', title: 'Capture et partage', desc: 'Prends des photos et partage-les avec tes amis en un tap.' },
+    { emoji: '🤝', title: 'Ajoute des amis', desc: 'Recherche par @pseudo ou approche deux téléphones (NFC) pour te connecter.' },
+    { emoji: '💬', title: 'Chatte en temps réel', desc: 'Envoie des messages qui arrivent instantanément.' },
+    { emoji: '👤', title: 'Ton profil', desc: 'Personnalise ton compte et suis tes amis.' },
+  ];
+  function onboardingScreen() {
+    const p = ONBOARDING_PAGES[onboardingStep];
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;background:linear-gradient(180deg,#f5f5f7,#e8e8ed);text-align:center">
+      <div style="font-size:72px;margin-bottom:20px">${p.emoji}</div>
+      <div style="font-size:24px;font-weight:700;color:#1d1d1f;margin-bottom:8px">${p.title}</div>
+      <div style="font-size:15px;color:#8e8e93;max-width:260px;line-height:1.4;margin-bottom:32px">${p.desc}</div>
+      <div style="display:flex;gap:6px;margin-bottom:24px">
+        ${ONBOARDING_PAGES.map((_,i) => `<div style="width:${i===onboardingStep?24:8}px;height:8px;border-radius:4px;background:${i===onboardingStep?'#1d1d1f':'#d1d1d6'};transition:all .3s"></div>`).join('')}
+      </div>
+      <button onclick="nextOnboarding()" style="padding:12px 32px;border-radius:12px;border:none;background:#1d1d1f;color:#fff;font-size:14px;font-weight:700;cursor:pointer">${onboardingStep < ONBOARDING_PAGES.length-1 ? 'Suivant' : 'Commencer'}</button>
+      <button onclick="finishOnboarding()" style="margin-top:12px;background:none;border:none;color:#8e8e93;font-size:13px;cursor:pointer">Passer</button>
+    </div>`;
+  }
+  function nextOnboarding() { if (onboardingStep < ONBOARDING_PAGES.length - 1) { onboardingStep++; render(); } else finishOnboarding(); }
+  function finishOnboarding() { try { localStorage.setItem('onboarded', '1'); } catch(e) {} onboardingStep = 0; go('camera'); }
+
+  // ---- Navigation ----
+  function go(screen) {
+    if (!AUTH && screen !== 'auth' && screen !== 'setup') { screen = 'auth'; }
+    if (currentScreen === 'conversation' && screen !== 'conversation') stopPolling();
+    currentScreen = screen;
+    const bnav = document.getElementById('bnav');
+    if (bnav) bnav.style.display = (screen === 'conversation') ? 'none' : 'flex';
+    document.querySelectorAll('.bnav button').forEach(b => b.classList.remove('active'));
+    const idx = {camera:0, chat:1, profile:2}[screen];
+    if (idx !== undefined) document.querySelectorAll('.bnav button')[idx].classList.add('active');
+    const titles = {camera:'Caméra', chat:'Chat', profile:'Profil', auth:'Connexion', conversation:'Chat', search:'Ajouter des amis', setup:'Configuration', nfc:'NFC'};
+    document.getElementById('cambarTitle').textContent = titles[screen] || '';
+    const backBtn = document.getElementById('backBtn');
+    if (backBtn) {
+      if (screen === 'search' || screen === 'conversation') backBtn.style.display = 'flex';
+      else backBtn.style.display = 'none';
+      if (screen === 'conversation') backBtn.onclick = function(){ backFromChat(); };
+      else if (screen === 'search') backBtn.onclick = function(){ go('chat'); };
+    }
+    render();
+    if (screen === 'chat') loadFriends().then(() => { if (currentScreen === 'chat') render(); });
+  }
+  function render() {
+    const screen = document.getElementById('screen');
+    if (currentScreen === 'setup') screen.innerHTML = setupScreen();
+    else if (currentScreen === 'auth') screen.innerHTML = authScreen();
+    else if (currentScreen === 'onboarding') screen.innerHTML = onboardingScreen();
+    else if (currentScreen === 'camera') screen.innerHTML = cameraScreen();
+    else if (currentScreen === 'chat') screen.innerHTML = chatScreen();
+    else if (currentScreen === 'profile') screen.innerHTML = profileScreen();
+    else if (currentScreen === 'conversation') screen.innerHTML = conversationScreen();
+    else if (currentScreen === 'search') screen.innerHTML = searchScreen();
+    else if (currentScreen === 'nfc') screen.innerHTML = nfcScreen();
+    if (currentScreen === 'search') setTimeout(loadSuggestions, 50);
+  }
+
+  // ---- Camera ----
+  function cameraScreen() {
+    return `<div class="viewfinder">
+      <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:40px 40px"></div>
+      <div class="shutter" onclick="takeSnap()"></div>
+      <div class="vf-label">TAP POUR CAPTURER</div>
+    </div>
+    <div class="stories" id="storiesRow">
+      <div class="story"><div class="ring"><div class="av">${me()?me().charAt(0).toUpperCase():'?'}</div></div><div class="name">Ma story</div></div>
+    </div>`;
+  }
+  function takeSnap() { showToast('📸 Photo capturée'); }
+
+  // ---- Chat ----
+  async function loadFriends() {
+    if (!me() || !sb) return;
+    const { data } = await sb.from('friends').select('friend_pseudo').eq('user_pseudo', me());
+    const fromDb = (data || []).map(r => r.friend_pseudo);
+    const merged = [...new Set([...FRIENDS, ...fromDb])];
+    FRIENDS = merged;
+    try { localStorage.setItem('friends', JSON.stringify(FRIENDS)); } catch(e) {}
+    if (currentScreen === 'chat') render();
+  }
+  function chatScreen() {
+    if (!FRIENDS.length) {
+      return `<div style="flex:1;display:flex;flex-direction:column">
+        <div id="pendingReqs" style="padding:8px 16px"></div>
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:#8e8e93;font-size:13px">
+          <div><div style="font-size:40px;margin-bottom:8px">🤝</div>Aucun ami.<br>Recherche un @ pour ajouter un ami.</div>
+        </div>
+      </div>`;
+    }
+    return `<div style="flex:1;overflow-y:auto">
+      ${FRIENDS.map(f => `<div class="chatrow" onclick="openChat('${f}')">
+        <div class="av">${avatarOf(f)}</div>
+        <div class="info"><b>${f}</b><span>Appuie pour chatter</span></div>
+      </div>`).join('')}
+    </div>`;
+  }
+  async function openChat(friend) {
+    CHAT_TARGET = friend;
+    currentScreen = 'conversation';
+    document.querySelectorAll('.bnav button').forEach(b => b.classList.remove('active'));
+    const bnav = document.getElementById('bnav');
+    if (bnav) bnav.style.display = 'none';
+    document.getElementById('cambarTitle').textContent = friend;
+    const backBtn = document.getElementById('backBtn');
+    if (backBtn) { backBtn.style.display = 'flex'; backBtn.onclick = function(){ backFromChat(); }; }
+    await loadMessages();
+    render();
+    startPolling();
+  }
+  function conversationScreen() {
+    const friend = CHAT_TARGET;
+    const bubbles = MESSAGES.length ? MESSAGES.map(m => {
+      const isMe = m.from_pseudo === me();
+      return `<div class="sender-label" style="${isMe?'text-align:right':''}">${isMe?'Vous':friend}</div>
+        <div class="chat-bubble ${isMe?'me':'them'}">${m.text}</div>`;
+    }).join('') : `<div style="text-align:center;padding:40px 10px;color:#8e8e93;font-size:13px">Aucun message. Dis bonjour 👋</div>`;
+    return `<div style="flex:1;display:flex;flex-direction:column">
+      <div style="padding:10px 16px;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;gap:8px">
+        <div style="font-weight:600;color:#1d1d1f">${friend}</div>
+      </div>
+      <div id="msgList" style="flex:1;overflow-y:auto;padding:8px 14px;display:flex;flex-direction:column">${bubbles}</div>
+      <div class="inputbar">
+        <input id="msgInput" placeholder="Message à ${friend}…" />
+        <button onclick="sendMsg()">➤</button>
+      </div>
+    </div>`;
+  }
+  function backFromChat() {
+    stopPolling();
+    CHAT_TARGET = null;
+    currentScreen = 'chat';
+    document.getElementById('backBtn').style.display = 'none';
+    document.getElementById('cambarTitle').textContent = 'Chat';
+    const bnav = document.getElementById('bnav');
+    if (bnav) bnav.style.display = 'flex';
+    render();
+  }
+  async function loadMessages() {
+    if (!CHAT_TARGET || !me() || !sb) return;
+    const { data } = await sb.from('messages').select('*').or(`and(from_pseudo.eq.${me()},to_pseudo.eq.${CHAT_TARGET}),and(from_pseudo.eq.${CHAT_TARGET},to_pseudo.eq.${me()})`).order('created_at', { ascending: true });
+    const newMsgs = data || [];
+    if (newMsgs.length > MESSAGES.length) {
+      const last = newMsgs[newMsgs.length - 1];
+      if (last && last.from_pseudo !== me()) {
+        showToast('🔔 ' + last.from_pseudo + ': ' + last.text);
+        if ('Notification' in window && Notification.permission === 'granted') new Notification('Nouveau message', { body: last.from_pseudo + ': ' + last.text });
+      }
+    }
+    MESSAGES = newMsgs;
+    const list = document.getElementById('msgList');
+    if (list) { list.innerHTML = conversationScreen().match(/<div id="msgList"[^>]*>([\s\S]*)<\/div>\s*<div class="inputbar">/)[1]; list.scrollTop = list.scrollHeight; }
+  }
+  async function sendMsg() {
+    const input = document.getElementById('msgInput');
+    const text = input.value.trim();
+    if (!text || !CHAT_TARGET) return;
+    input.value = '';
+    await sb.from('messages').insert({ from_pseudo: me(), to_pseudo: CHAT_TARGET, text });
+    await loadMessages();
+  }
+  function startPolling() {
+    stopPolling();
+    POLL_TIMER = setInterval(loadMessages, 2000);
+  }
+  function stopPolling() { if (POLL_TIMER) { clearInterval(POLL_TIMER); POLL_TIMER = null; } }
+
+  // ---- Discover removed ----
+
+  // ---- Profile ----
+  function nfcEnabled() { try { return localStorage.getItem('nfc_enabled') !== 'false'; } catch(e) { return true; } }
+  function setNfcEnabled(v) { try { localStorage.setItem('nfc_enabled', v ? 'true' : 'false'); } catch(e) {} }
+  function profileScreen() {
+    return `<div class="profhead">
+      <div class="bigav">${me()?me().charAt(0).toUpperCase():'?'}</div>
+      <h2 ondblclick="promptApiUrl()">${me()||'Invité'}</h2>
+      <p>@${me()||'invite'}</p>
+    </div>
+    <div class="statsrow">
+      <div><b>${FRIENDS.length}</b><span>Amis</span></div>
+      <div><b>0</b><span>Photos</span></div>
+      <div><b>0</b><span>Stories</span></div>
+    </div>
+    <div style="padding:16px">
+      <div style="padding:12px;background:#f7f7f7;border-radius:12px;border:1px solid #e5e5e5;margin-bottom:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-weight:600;color:#1d1d1f;font-size:14px">📡 NFC</div>
+            <div style="font-size:12px;color:#8e8e93">Activer/désactiver le NFC</div>
+          </div>
+          <label style="position:relative;display:inline-block;width:44px;height:24px">
+            <input type="checkbox" ${nfcEnabled()?'checked':''} onchange="toggleNfc(this.checked)" style="opacity:0;width:0;height:0" />
+            <span style="position:absolute;cursor:pointer;inset:0;background:${nfcEnabled()?'#22c55e':'#d1d1d6'};border-radius:24px;transition:.3s"></span>
+            <span style="position:absolute;top:2px;left:${nfcEnabled()?'22px':'2px'};width:20px;height:20px;background:#fff;border-radius:50%;transition:.3s"></span>
+          </label>
+        </div>
+      </div>
+      <button onclick="logout()" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e5e5;background:#fff;color:#ef4444;font-size:14px;font-weight:600;cursor:pointer">Se déconnecter</button>
+    </div>`;
+  }
+  async function toggleNfc(enabled) {
+    setNfcEnabled(enabled);
+    if (enabled) {
+      // request permission / check status
+      try {
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.CapacitorNfc) {
+          const NFC = window.Capacitor.Plugins.CapacitorNfc;
+          const status = await NFC.getStatus();
+          if (status.status === 'NFC_DISABLED') {
+            showToast('⚠️ Active le NFC dans les réglages Android');
+            try { await NFC.showSettings(); } catch(e) {}
+          } else {
+            showToast('📡 NFC activé');
+          }
+        } else {
+          showToast('📡 NFC activé (simulation)');
+        }
+      } catch(e) { showToast('Erreur NFC: ' + e.message); }
+    } else {
+      showToast('📡 NFC désactivé');
+    }
+    render();
+  }
+  function logout() { try { localStorage.removeItem('auth'); localStorage.removeItem('onboarded'); } catch(e) {} AUTH = null; FRIENDS = []; go('auth'); }
+  function promptApiUrl() { 
+    const v = prompt('URL Supabase (https://xxxx.supabase.co)', SUPABASE_URL); 
+    if (v) { localStorage.setItem('sb_url', v.trim()); }
+    const u = prompt('URL de mise à jour (https://xxx.github.io/snapnfc-update)', UPDATE_URL); 
+    if (u) { localStorage.setItem('update_url', u.trim()); }
+    location.reload(); 
+  }
+
+  // ---- Search / Add friends ----
+  function searchScreen() {
+    return `<div class="search-screen">
+      <div style="position:relative;margin-bottom:16px">
+        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#8e8e93">🔍</span>
+        <input id="searchInput" placeholder="Rechercher par @pseudo" />
+      </div>
+      <button onclick="sendRequest()" style="width:100%;padding:11px;border-radius:8px;border:none;background:#000;color:#fff;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px">Envoyer la demande</button>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <button onclick="nfcTap()" style="flex:1;padding:11px;border-radius:12px;border:1px solid #d1d1d6;background:#fff;color:#1d1d1f;font-size:13px;font-weight:700;cursor:pointer">📡 NFC</button>
+        <button onclick="showCode()" style="flex:1;padding:11px;border-radius:12px;border:1px solid #d1d1d6;background:#fff;color:#1d1d1f;font-size:13px;font-weight:700;cursor:pointer">🔢 Code</button>
+      </div>
+      <div id="codeArea" style="text-align:center;margin-bottom:16px"></div>
+      <div id="searchMsg" style="margin-bottom:12px;font-size:12px;color:#8e8e93"></div>
+      <div style="font-size:12px;color:#8e8e93;margin:8px 0 6px;text-transform:uppercase;letter-spacing:1px">Suggestions</div>
+      <div id="suggestions"></div>
+    </div>`;
+  }
+  // ---- Code system (works on all devices) ----
+  let myCode = null;
+  function genCode() { return Math.floor(100000 + Math.random() * 900000).toString(); }
+  function showCode() {
+    const area = document.getElementById('codeArea');
+    if (!area) return;
+    if (!myCode) myCode = genCode();
+    area.innerHTML = `<div style="background:#f7f7f7;border-radius:12px;padding:16px;border:1px solid #e5e5e5">
+      <div style="font-size:11px;color:#8e8e93;margin-bottom:6px">Ton code (valide 5 min)</div>
+      <div style="font-size:32px;font-weight:700;letter-spacing:8px;color:#1d1d1f;margin-bottom:12px">${myCode}</div>
+      <div style="display:flex;gap:8px">
+        <input id="codeInput" placeholder="Code de l'autre" style="flex:1;padding:8px;border-radius:8px;border:1px solid #d1d1d6;background:#fff;color:#1d1d1f;font-size:13px;outline:none" />
+        <button onclick="enterCode()" style="padding:8px 12px;border-radius:8px;border:none;background:#000;color:#fff;font-size:12px;font-weight:700;cursor:pointer">OK</button>
+      </div>
+    </div>`;
+  }
+  function enterCode() {
+    const input = document.getElementById('codeInput');
+    const code = input.value.trim();
+    if (!code) return;
+    // In a real app, this code would be looked up on the server
+    // For now, simulate: accept any 6-digit code and add a friend
+    if (!/^\d{6}$/.test(code)) { showToast('Code invalide (6 chiffres)'); return; }
+    const peer = 'user_' + code.slice(0,3);
+    if (!FRIENDS.includes(peer)) FRIENDS.push(peer);
+    try { localStorage.setItem('friends', JSON.stringify(FRIENDS)); } catch(e) {}
+    showToast('✅ Connecté via code !');
+    go('chat');
+  }
+  // QR code removed - NFC + manual search only
+  async function sendRequest() {
+    const input = document.getElementById('searchInput');
+    const raw = input.value.trim().replace(/^@/,'');
+    const msg = document.getElementById('searchMsg');
+    if (!raw) { msg.textContent = 'Entre un pseudo.'; return; }
+    if (!sb) { msg.textContent = 'Supabase non configuré.'; return; }
+    // check user exists
+    const { data: u } = await sb.from('users').select('pseudo').eq('pseudo', raw).maybeSingle();
+    if (!u) { msg.textContent = 'Compte introuvable.'; return; }
+    if (raw === me()) { msg.textContent = 'Tu ne peux pas t\'ajouter toi-même.'; return; }
+    // check already friends
+    const { data: f } = await sb.from('friends').select('*').eq('user_pseudo', me()).eq('friend_pseudo', raw);
+    if (f && f.length) { msg.textContent = 'Déjà ami.'; return; }
+    // check pending
+    const { data: r } = await sb.from('requests').select('*').eq('from_pseudo', me()).eq('to_pseudo', raw).eq('status', 'pending');
+    if (r && r.length) { msg.textContent = 'Demande déjà envoyée.'; return; }
+    await sb.from('requests').insert({ from_pseudo: me(), to_pseudo: raw });
+    msg.textContent = '✅ Demande envoyée à ' + raw;
+    showToast('Demande envoyée');
+  }
+  async function loadSuggestions() {
+    if (!sb) return;
+    const box = document.getElementById('suggestions');
+    if (!box) return;
+    const { data } = await sb.from('users').select('pseudo');
+    const users = (data || []).map(u => u.pseudo).filter(u => u !== me());
+    box.innerHTML = users.map(u => `<div class="card-row">
+      <div class="av">${avatarOf(u)}</div>
+      <div style="flex:1"><b style="color:#1d1d1f">${u}</b><br><span style="font-size:12px;color:#8e8e93">@${u}</span></div>
+      <button onclick="document.getElementById('searchInput').value='@${u}';sendRequest()" style="padding:6px 12px;border-radius:8px;border:none;background:#000;color:#fff;font-size:11px;font-weight:700;cursor:pointer">Ajouter</button>
+    </div>`).join('') || '<div style="color:#8e8e93;font-size:13px;text-align:center;padding:20px">Aucun utilisateur</div>';
+  }
+  async function loadFriends() {
+    if (!me() || !sb) return;
+    const { data } = await sb.from('friends').select('friend_pseudo').eq('user_pseudo', me());
+    const fromDb = (data || []).map(r => r.friend_pseudo);
+    const merged = [...new Set([...FRIENDS, ...fromDb])];
+    FRIENDS = merged;
+    try { localStorage.setItem('friends', JSON.stringify(FRIENDS)); } catch(e) {}
+    if (currentScreen === 'chat') render();
+  }
+  // check pending requests and show them in chat screen
+  async function loadPendingRequests() {
+    if (!me() || !sb) return [];
+    const { data } = await sb.from('requests').select('*').eq('to_pseudo', me()).eq('status', 'pending');
+    return data || [];
+  }
+  async function acceptRequest(from) {
+    if (!sb) return;
+    await sb.from('requests').update({ status: 'accepted' }).eq('from_pseudo', from).eq('to_pseudo', me());
+    await sb.from('friends').insert({ user_pseudo: me(), friend_pseudo: from });
+    await sb.from('friends').insert({ user_pseudo: from, friend_pseudo: me() });
+    showToast('✅ ' + from + ' ajouté en ami');
+    await loadFriends();
+    if (currentScreen === 'chat') render();
+  }
+  async function refuseRequest(from) {
+    if (!sb) return;
+    await sb.from('requests').delete().eq('from_pseudo', from).eq('to_pseudo', me()).eq('status', 'pending');
+    showToast('Demande refusée');
+    if (currentScreen === 'chat') render();
+  }
+
+  // ---- NFC ----
+  let nfcMode = 'idle'; // 'idle' | 'send' | 'receive' | 'found'
+  let nfcFoundPeer = null;
+  let nfcListener = null;
+  function nfcScreen() {
+    if (nfcMode === 'send') {
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;background:#f5f5f7">
+        <div style="font-size:64px;margin-bottom:16px">📤</div>
+        <div style="font-size:18px;font-weight:700;color:#1d1d1f;margin-bottom:8px">Envoi en cours…</div>
+        <div style="font-size:13px;color:#8e8e93;margin-bottom:24px">Approche ton téléphone de l'autre appareil.</div>
+        <div style="width:80px;height:80px;border-radius:50%;border:4px solid #7c3aed;animation:nfcPulse 1.5s ease-in-out infinite;margin-bottom:24px"></div>
+        <button onclick="stopNfc()" style="padding:12px 32px;border-radius:12px;border:none;background:#ef4444;color:#fff;font-size:14px;font-weight:700;cursor:pointer">Quitter</button>
+        <style>@keyframes nfcPulse{0%{transform:scale(.8);opacity:.6}50%{transform:scale(1.2);opacity:1}100%{transform:scale(.8);opacity:.6}}</style>
+      </div>`;
+    }
+    if (nfcMode === 'active' || nfcMode === 'receive') {
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;background:#f5f5f7">
+        <div style="font-size:64px;margin-bottom:16px">📥</div>
+        <div style="font-size:18px;font-weight:700;color:#1d1d1f;margin-bottom:8px">En attente d'un téléphone…</div>
+        <div style="font-size:13px;color:#8e8e93;margin-bottom:24px">Approche un téléphone qui envoie son code.</div>
+        <div style="width:80px;height:80px;border-radius:50%;border:4px solid #22c55e;animation:nfcPulse 1.5s ease-in-out infinite;margin-bottom:24px"></div>
+        <button onclick="stopNfc()" style="padding:12px 32px;border-radius:12px;border:none;background:#ef4444;color:#fff;font-size:14px;font-weight:700;cursor:pointer">Quitter</button>
+        <style>@keyframes nfcPulse{0%{transform:scale(.8);opacity:.6}50%{transform:scale(1.2);opacity:1}100%{transform:scale(.8);opacity:.6}}</style>
+      </div>`;
+    }
+    if (nfcMode === 'found') {
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;background:#f5f5f7">
+        <div style="font-size:64px;margin-bottom:16px">🤝</div>
+        <div style="font-size:20px;font-weight:700;color:#1d1d1f;margin-bottom:8px">Trouvé !</div>
+        <div style="font-size:15px;color:#8e8e93;margin-bottom:8px">Connecté à <b style="color:#1d1d1f">${nfcFoundPeer}</b></div>
+        <div style="font-size:13px;color:#8e8e93;margin-bottom:24px">Synchronisation en cours… attends 2 sec.</div>
+        <div style="width:80px;height:80px;border-radius:50%;border:4px solid #7c3aed;animation:nfcPulse 1.5s ease-in-out infinite;margin-bottom:24px"></div>
+        <style>@keyframes nfcPulse{0%{transform:scale(.8);opacity:.6}50%{transform:scale(1.2);opacity:1}100%{transform:scale(.8);opacity:.6}}</style>
+      </div>`;
+    }
+    // idle: ask send or receive
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;background:#f5f5f7">
+      <div style="font-size:64px;margin-bottom:16px">📡</div>
+      <div style="font-size:20px;font-weight:700;color:#1d1d1f;margin-bottom:8px">Ajouter par NFC</div>
+      <div style="font-size:13px;color:#8e8e93;margin-bottom:24px;max-width:260px">NFC : Android uniquement (tap deux téléphones). Sur iOS ou Android 10+, utilise le Code ou la recherche manuelle.</div>
+      <button onclick="startNfcSend()" style="width:100%;max-width:260px;padding:12px;border-radius:12px;border:none;background:#000;color:#fff;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px">📤 Envoyer mon code</button>
+      <button onclick="startNfcReceive()" style="width:100%;max-width:260px;padding:12px;border-radius:12px;border:1px solid #d1d1d6;background:#fff;color:#1d1d1f;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:16px">📥 Recevoir un code</button>
+      <button onclick="go('search')" style="background:none;border:none;color:#8e8e93;font-size:13px;cursor:pointer">← Retour</button>
+    </div>`;
+  }
+  async function startNfcSession() {
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    const isAndroid = isNative && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android';
+    if (isNative && !isAndroid) {
+      // iOS: NFC not supported for P2P
+      showToast('NFC disponible uniquement sur Android');
+      nfcMode = 'idle';
+      go('search');
+      return;
+    }
+    nfcMode = 'active';
+    render();
+    showToast('📡 NFC actif — approche un téléphone');
+    try {
+      if (isNative && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.CapacitorNfc) {
+        const NFC = window.Capacitor.Plugins.CapacitorNfc;
+        // Share our pseudo via NDEF (Android P2P)
+        try {
+          const encoder = new TextEncoder();
+          const langBytes = Array.from(encoder.encode('en'));
+          const textBytes = Array.from(encoder.encode(me()));
+          const payload = [langBytes.length & 0x3f, ...langBytes, ...textBytes];
+          await NFC.share({ records: [{ tnf: 0x01, type: [0x54], id: [], payload }] });
+        } catch(e) { console.warn('share non supporté (Android 10+):', e); showToast('⚠️ NFC P2P non supporté sur cet Android. Utilise le Code.'); }
+        // Listen for incoming tags
+        if (nfcListener) { try { await nfcListener.remove(); } catch(e) {} }
+        // Check NFC status
+        try {
+          const status = await NFC.getStatus();
+          console.log('NFC status:', JSON.stringify(status));
+          if (status.status === 'NFC_DISABLED') {
+            showToast('NFC désactivé. Active-le dans les réglages.');
+            try { await NFC.showSettings(); } catch(e) {}
+            stopNfc(false);
+            return;
+          }
+        } catch(e) { console.warn('getStatus failed', e); }
+        const handleNfcEvent = async (event) => {
+          try {
+            console.log('NFC event:', JSON.stringify(event));
+            const tag = event.tag || {};
+            let peer = null;
+            if (tag.ndefMessage && tag.ndefMessage.length) {
+              const rec = tag.ndefMessage[0];
+              const payload = rec.payload || [];
+              if (payload.length > 0) {
+                const text = new TextDecoder().decode(new Uint8Array(payload.slice(payload[0] + 1)));
+                peer = text.trim();
+              }
+            } else if (event.message) { peer = event.message; }
+            else if (event.type === 'ndef' && event.tag) { peer = null; }
+            if (peer && peer !== me() && !FRIENDS.includes(peer) && nfcMode === 'active') {
+              // Found! Show "found, wait 2 sec"
+              nfcMode = 'found';
+              nfcFoundPeer = peer;
+              render();
+              showToast('🤝 Trouvé ! Attends 2 sec…');
+              // Wait 2 seconds for sync
+              await new Promise(res => setTimeout(res, 2000));
+              // Send a friend request (not auto-add)
+              await sb.from('requests').insert({ from_pseudo: me(), to_pseudo: peer });
+              showToast('📩 Demande envoyée à ' + peer + ' par NFC');
+              await stopNfc(false);
+            }
+          } catch(e) { console.warn('NFC event error', e); }
+        };
+        // Listen to multiple event types for compatibility
+        nfcListener = await NFC.addListener('nfcEvent', handleNfcEvent);
+        try { await NFC.addListener('ndefDiscovered', handleNfcEvent); } catch(e) {}
+        try { await NFC.addListener('tagDiscovered', handleNfcEvent); } catch(e) {}
+        await NFC.startScanning({ invalidateAfterFirstRead: false });
+      } else {
+        // Simulation: after 2s, simulate finding a peer
+        setTimeout(async () => {
+          console.log('SIM: firing, nfcMode=', nfcMode);
+          if (nfcMode !== 'active') return;
+          const peers = ['alex','mia','leo','sarah','tom'].filter(p => p !== me() && !FRIENDS.includes(p));
+          console.log('SIM: peers=', peers);
+          if (peers.length) {
+            const peer = peers[Math.floor(Math.random()*peers.length)];
+            // Found! Show "found, wait 2 sec"
+            nfcMode = 'found';
+            nfcFoundPeer = peer;
+            render();
+            showToast('🤝 Trouvé ! Attends 2 sec…');
+            await new Promise(res => setTimeout(res, 2000));
+            // Create peer user if not exists (ignore errors)
+            const ur = await sb.from('users').insert({ pseudo: peer, password: 'demo' });
+            console.log('user insert:', JSON.stringify(ur));
+            // Simulate receiving a request FROM the peer (so it appears in "Demandes reçues")
+            const rr = await sb.from('requests').insert({ from_pseudo: peer, to_pseudo: me() });
+            console.log('request insert:', JSON.stringify(rr));
+            showToast('📩 ' + peer + ' veut t\'ajouter par NFC !');
+            await stopNfc(false);
+          }
+        }, 2000);
+      }
+    } catch(e) { console.warn('NFC native indisponible', e); showToast('📡 NFC simulé (navigateur)'); }
+  }
+  async function startNfcSend() {
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    if (!isNative) {
+      // Browser simulation
+      nfcMode = 'send';
+      render();
+      showToast('📡 NFC simulé (navigateur)');
+      return;
+    }
+    const isAndroid = window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android';
+    if (!isAndroid) {
+      showToast('NFC disponible uniquement sur Android');
+      nfcMode = 'idle';
+      go('search');
+      return;
+    }
+    nfcMode = 'send';
+    render();
+    showToast('📡 Envoi activé — attends qu\'un téléphone te scanne');
+    try {
+      const HceNfc = window.Capacitor.Plugins.HceNfc;
+      if (HceNfc) {
+        await HceNfc.startHce({ pseudo: me() });
+      } else {
+        showToast('HCE non disponible');
+        nfcMode = 'idle';
+        go('search');
+      }
+    } catch(e) { console.warn('HCE start failed', e); showToast('Erreur NFC: ' + e.message); nfcMode = 'idle'; go('search'); }
+  }
+  async function startNfcReceive() {
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    const isAndroid = isNative && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android';
+    if (!isNative || !isAndroid) {
+      // Browser simulation
+      nfcMode = 'receive';
+      render();
+      showToast('📡 NFC simulé (navigateur)');
+      // simulate finding a peer after 2s
+      setTimeout(async () => {
+        if (nfcMode !== 'receive' && nfcMode !== 'active') return;
+        const peers = ['alex','mia','leo','sarah','tom'].filter(p => p !== me() && !FRIENDS.includes(p));
+        if (peers.length) {
+          const peer = peers[Math.floor(Math.random()*peers.length)];
+          nfcMode = 'found';
+          nfcFoundPeer = peer;
+          render();
+          showToast('🤝 Trouvé ! Attends 2 sec…');
+          await new Promise(res => setTimeout(res, 2000));
+          await sb.from('users').insert({ pseudo: peer, password: 'demo' });
+          await sb.from('requests').insert({ from_pseudo: peer, to_pseudo: me() });
+          showToast('📩 ' + peer + ' veut t\'ajouter par NFC !');
+          await stopNfc(false);
+        }
+      }, 2000);
+      return;
+    }
+    nfcMode = 'active';
+    render();
+    showToast('📡 Réception activée — approche un téléphone qui envoie');
+    try {
+      const NFC = window.Capacitor.Plugins.CapacitorNfc;
+      if (!NFC) { showToast('NFC non disponible'); nfcMode = 'idle'; go('search'); return; }
+      // Check NFC status
+      try {
+        const status = await NFC.getStatus();
+        if (status.status === 'NFC_DISABLED') {
+          showToast('NFC désactivé. Active-le dans les réglages.');
+          try { await NFC.showSettings(); } catch(e) {}
+          nfcMode = 'idle';
+          go('search');
+          return;
+        }
+      } catch(e) { console.warn('getStatus failed', e); }
+      if (nfcListener) { try { await nfcListener.remove(); } catch(e) {} }
+      nfcListener = await NFC.addListener('nfcEvent', async (event) => {
+        try {
+          const tag = event.tag || {};
+          let peer = null;
+          if (tag.ndefMessage && tag.ndefMessage.length) {
+            const rec = tag.ndefMessage[0];
+            const payload = rec.payload || [];
+            if (payload.length > 0) {
+              const text = new TextDecoder().decode(new Uint8Array(payload.slice(payload[0] + 1)));
+              peer = text.trim();
+            }
+          } else if (event.message) { peer = event.message; }
+          if (peer && peer !== me() && !FRIENDS.includes(peer) && nfcMode === 'active') {
+            nfcMode = 'found';
+            nfcFoundPeer = peer;
+            render();
+            showToast('🤝 Trouvé ! Attends 2 sec…');
+            await new Promise(res => setTimeout(res, 2000));
+            await sb.from('users').insert({ pseudo: peer, password: 'demo' });
+            await sb.from('requests').insert({ from_pseudo: peer, to_pseudo: me() });
+            showToast('📩 ' + peer + ' veut t\'ajouter par NFC !');
+            await stopNfc(false);
+          }
+        } catch(e) { console.warn('NFC event error', e); }
+      });
+      try { await NFC.addListener('ndefDiscovered', async (event) => { console.log('ndefDiscovered:', JSON.stringify(event)); }); } catch(e) {}
+      try { await NFC.addListener('tagDiscovered', async (event) => { console.log('tagDiscovered:', JSON.stringify(event)); }); } catch(e) {}
+      await NFC.startScanning({ invalidateAfterFirstRead: false });
+    } catch(e) { console.warn('NFC native indisponible', e); showToast('Erreur NFC: ' + e.message); nfcMode = 'idle'; go('search'); }
+  }
+  async function stopNfc(addedFriend) {
+    nfcMode = 'idle';
+    try {
+      if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.CapacitorNfc) {
+        const NFC = window.Capacitor.Plugins.CapacitorNfc;
+        await NFC.stopScanning();
+        try { await NFC.unshare(); } catch(e) {}
+        if (nfcListener) { await nfcListener.remove(); nfcListener = null; }
+      }
+    } catch(e) {}
+    if (addedFriend) {
+      go('chat');
+    } else {
+      go('search');
+    }
+  }
+  async function nfcTap() {
+    if (!nfcEnabled()) {
+      showToast('📡 NFC désactivé. Active-le dans ton profil.');
+      return;
+    }
+    // NFC is Android-only; on iOS or web, show info
+    const isAndroid = window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android';
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    if (isNative && !isAndroid) {
+      showToast('NFC disponible uniquement sur Android. Utilise la recherche manuelle.');
+      return;
+    }
+    // open the NFC screen
+    nfcMode = 'idle';
+    go('nfc');
+  }
+
+  // ---- Camera ----
+  function cameraScreen() {
+    return `<div class="viewfinder">
+      <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:40px 40px"></div>
+      <div class="shutter" onclick="takeSnap()"></div>
+      <div class="vf-label">TAP POUR CAPTURER</div>
+    </div>
+    <div class="stories" id="storiesRow">
+      <div class="story"><div class="ring"><div class="av">${me()?me().charAt(0).toUpperCase():'?'}</div></div><div class="name">Ma story</div></div>
+    </div>`;
+  }
+  function takeSnap() { showToast('📸 Photo capturée'); }
+
+  // ---- Toast ----
+  function showToast(text) {
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.textContent = text;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2200);
+  }
+
+  // ---- Auto-update (self-hosted, simple) ----
+  const APP_VERSION = '1.0.4';
+  const UPDATE_URL = localStorage.getItem('update_url') || 'https://calvezeliaz0-design.github.io/snapnfc-update';
+  let updateAvailable = false;
+  let updateHtml = null;
+  let updateVersion = null;
+  let updateChangelog = '';
+
+  async function checkForUpdates() {
+    if (!UPDATE_URL) return; // no update server configured
+    if (updateAvailable) return; // already found an update
+    // Check network availability
+    if (!navigator.onLine) return;
+    try {
+      const res = await fetch(UPDATE_URL + '/version.json?t=' + Date.now());
+      if (!res.ok) return;
+      const remote = await res.json();
+      if (remote.version && remote.version !== APP_VERSION) {
+        updateAvailable = true;
+        updateVersion = remote.version;
+        updateChangelog = remote.changelog || '';
+        // Download new HTML
+        const htmlRes = await fetch(UPDATE_URL + '/index.html?t=' + Date.now());
+        if (!htmlRes.ok) return;
+        updateHtml = await htmlRes.text();
+        // Show update prompt
+        showUpdatePrompt();
+      }
+    } catch(e) { console.warn('Update check failed', e); }
+  }
+
+  function showUpdatePrompt() {
+    const modal = document.createElement('div');
+    modal.id = 'updateModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = `
+      <div style="background:#fff;border-radius:16px;padding:24px;width:300px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+        <div style="font-size:48px;margin-bottom:12px">🔄</div>
+        <div style="font-size:18px;font-weight:700;color:#1d1d1f;margin-bottom:8px">Mise à jour disponible</div>
+        <div style="font-size:13px;color:#8e8e93;margin-bottom:8px">Version ${updateVersion}</div>
+        ${updateChangelog ? `<div style="font-size:12px;color:#1d1d1f;text-align:left;background:#f5f5f7;border-radius:8px;padding:10px;margin-bottom:16px;white-space:pre-line">${updateChangelog}</div>` : ''}
+        <div style="font-size:13px;color:#8e8e93;margin-bottom:20px">Veux-tu mettre à jour maintenant ?</div>
+        <div style="display:flex;gap:8px">
+          <button onclick="dismissUpdate()" style="flex:1;padding:11px;border-radius:10px;border:1px solid #d1d1d6;background:#fff;color:#1d1d1f;font-size:13px;font-weight:600;cursor:pointer">Plus tard</button>
+          <button onclick="applyUpdate()" style="flex:1;padding:11px;border-radius:10px;border:none;background:#1d1d1f;color:#fff;font-size:13px;font-weight:700;cursor:pointer">Mettre à jour</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+
+  function dismissUpdate() {
+    const m = document.getElementById('updateModal');
+    if (m) m.remove();
+    // Store for next launch
+    if (updateHtml && updateVersion) {
+      try { localStorage.setItem('app_update_html', updateHtml); localStorage.setItem('app_update_version', updateVersion); } catch(e) {}
+    }
+  }
+
+  function applyUpdate() {
+    const m = document.getElementById('updateModal');
+    if (m) m.remove();
+    // Show loading screen
+    const loading = document.createElement('div');
+    loading.id = 'updateLoading';
+    loading.style.cssText = 'position:fixed;inset:0;background:#1d1d1f;z-index:400;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;';
+    loading.innerHTML = `
+      <div style="font-size:48px;margin-bottom:16px">🔄</div>
+      <div style="font-size:18px;font-weight:700;margin-bottom:8px">Mise à jour en cours…</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.7);margin-bottom:16px">Version ${updateVersion}</div>
+      ${updateChangelog ? `<div style="font-size:12px;color:rgba(255,255,255,.8);text-align:left;max-width:260px;margin-bottom:24px;white-space:pre-line">${updateChangelog}</div>` : ''}
+      <div style="width:40px;height:40px;border:4px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite"></div>
+      <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
+    document.body.appendChild(loading);
+    // Store and reload
+    try { localStorage.setItem('app_update_html', updateHtml); localStorage.setItem('app_update_version', updateVersion); } catch(e) {}
+    setTimeout(() => { location.reload(); }, 1500);
+  }
+
+  // Apply stored update on load
+  (function applyStoredUpdate() {
+    try {
+      const storedVersion = localStorage.getItem('app_update_version');
+      const storedHtml = localStorage.getItem('app_update_html');
+      if (storedVersion && storedHtml && storedVersion !== APP_VERSION) {
+        // Show loading screen
+        const loading = document.createElement('div');
+        loading.style.cssText = 'position:fixed;inset:0;background:#1d1d1f;z-index:400;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;';
+        loading.innerHTML = `
+          <div style="font-size:48px;margin-bottom:16px">🔄</div>
+          <div style="font-size:18px;font-weight:700;margin-bottom:8px">Mise à jour en cours…</div>
+          <div style="font-size:13px;color:rgba(255,255,255,.7);margin-bottom:24px">Version ${storedVersion}</div>
+          <div style="width:40px;height:40px;border:4px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite"></div>
+          <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
+        document.body.appendChild(loading);
+        // Apply via iframe after 1s
+        setTimeout(() => {
+          localStorage.removeItem('app_update_html');
+          localStorage.removeItem('app_update_version');
+          document.body.innerHTML = '';
+          var iframe = document.createElement('iframe');
+          iframe.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:none;z-index:99999;';
+          iframe.srcdoc = storedHtml;
+          iframe.onload = function() {
+            try { iframe.contentWindow.Capacitor = window.Capacitor; } catch(e) {}
+          };
+          document.body.appendChild(iframe);
+        }, 1000);
+      }
+    } catch(e) { console.warn('Apply update failed', e); }
+  })();
+
+  // ---- Init ----
+  function init() {
+    if (initSupabase()) {
+      if (!AUTH) { currentScreen = 'auth'; }
+      else if (!localStorage.getItem('onboarded')) { currentScreen = 'onboarding'; }
+      else { currentScreen = 'camera'; }
+    } else {
+      currentScreen = 'setup';
+    }
+    const cambar = document.createElement('div');
+    cambar.className = 'cambar';
+    cambar.id = 'cambar';
+    cambar.innerHTML = `<button class="back-btn" id="backBtn" style="display:none" onclick="backFromChat()">←</button>
+      <img src="logo.png" alt="TapChat" style="width:28px;height:28px;border-radius:8px;object-fit:cover" onerror="this.style.display='none'" />
+      <div class="title" id="cambarTitle">Caméra</div>
+      <div class="iconbtn" onclick="go('search')" title="Rechercher">🔍</div>`;
+    document.getElementById('screen').before(cambar);
+    render();
+    if (AUTH && sb) {
+      loadFriends();
+      if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+    }
+    // Store current version
+    try { localStorage.setItem('app_current_version', APP_VERSION); } catch(e) {}
+    // Check for updates silently every 10 seconds
+    setTimeout(checkForUpdates, 3000);
+    setInterval(checkForUpdates, 10000);
+    // Check NFC availability on startup (native only)
+    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+      setTimeout(async () => {
+        try {
+          const NFC = window.Capacitor.Plugins.CapacitorNfc;
+          if (NFC) {
+            const status = await NFC.getStatus();
+            if (status && status.status === 'NFC_DISABLED' && nfcEnabled()) {
+              showToast('⚠️ NFC désactivé dans les réglages Android');
+            }
+          }
+        } catch(e) {}
+      }, 2000);
+    }
+  }
+
+  // chat screen with pending requests
+  const _chatScreen = chatScreen;
+  chatScreen = function() {
+    // async load pending requests then render
+    loadPendingRequests().then(reqs => {
+      const el = document.getElementById('pendingReqs');
+      if (el) {
+        el.innerHTML = reqs.map(r => `<div class="card-row">
+          <div class="av">${avatarOf(r.from_pseudo)}</div>
+          <div style="flex:1"><b style="color:#1d1d1f">${r.from_pseudo}</b><br><span style="font-size:12px;color:#8e8e93">Veut t'ajouter</span></div>
+          <button onclick="acceptRequest('${r.from_pseudo}')" style="padding:6px 10px;border-radius:8px;border:none;background:#22c55e;color:#fff;font-size:11px;font-weight:700;cursor:pointer">✓</button>
+          <button onclick="refuseRequest('${r.from_pseudo}')" style="padding:6px 10px;border-radius:8px;border:none;background:#ef4444;color:#fff;font-size:11px;font-weight:700;cursor:pointer">✕</button>
+        </div>`).join('');
+      }
+    });
+    if (!FRIENDS.length) {
+      return `<div style="flex:1;display:flex;flex-direction:column">
+        <div id="pendingReqs" style="padding:8px 16px"></div>
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:#8e8e93;font-size:13px">
+          <div><div style="font-size:40px;margin-bottom:8px">🤝</div>Aucun ami.<br>Recherche un @ pour ajouter un ami.</div>
+        </div>
+      </div>`;
+    }
+    return `<div style="flex:1;overflow-y:auto">
+      <div id="pendingReqs" style="padding:8px 16px"></div>
+      <div style="font-size:12px;color:#8e8e93;margin:6px 16px 6px;text-transform:uppercase;letter-spacing:1px">Amis</div>
+      ${FRIENDS.map(f => `<div class="chatrow" onclick="openChat('${f}')">
+        <div class="av">${avatarOf(f)}</div>
+        <div class="info"><b>${f}</b><span>Appuie pour chatter</span></div>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  // override go to load friends on chat
+  const _go = go;
+  // go already defined above? redefine properly
+  // (go is defined earlier in code? No, go is defined in Navigation section)
+  
+  init();
+</script>
+</body>
+</html>
